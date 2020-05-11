@@ -3,7 +3,7 @@ import json
 from typing import AsyncIterable, Dict, NoReturn, Union
 
 from bacpypes.debugging import ModuleLogger, bacpypes_debugging
-from hbmqtt.broker import Broker
+# from hbmqtt.broker import Broker
 from hbmqtt.client import QOS_2, MQTTClient
 
 _debug = 0
@@ -12,33 +12,35 @@ _log = ModuleLogger(globals())
 
 @bacpypes_debugging
 class SensorStream(MQTTClient):
-    BROKER_CONFIG = {
-        "listeners": {"default": {"type": "tcp", "bind": "0.0.0.0:1883"}},
-        "topic-check": {"enabled": False},
-    }
+    # BROKER_CONFIG = {
+    #     "listeners": {"default": {"type": "tcp", "bind": "0.0.0.0:1883"}},
+    #     "topic-check": {"enabled": False},
+    # }
 
     def __init__(self) -> None:
         # pylint: disable=no-member
         SensorStream._info("Initialising broker on 0.0.0.0:1883")
-        self._broker = Broker(SensorStream.BROKER_CONFIG, asyncio.get_event_loop())
+        # self._broker = Broker(SensorStream.BROKER_CONFIG, asyncio.get_event_loop())
         self._running = False
         MQTTClient.__init__(self)
 
     async def start(self) -> Union[None, NoReturn]:
-        if _debug:
-            # pylint: disable=no-member
-            SensorStream._debug("Starting broker")
-        await self._broker.start()
+        # if _debug:
+        #     # pylint: disable=no-member
+        #     SensorStream._debug("Starting broker")
+        # await self._broker.start()
 
         if _debug:
             # pylint: disable=no-member
             SensorStream._debug("Connecting to broker")
-        await self.connect("mqtt://localhost")
+        # await self.connect("mqtt://localhost")
+        await self.connect("mqtt://192.168.1.113")
 
         if _debug:
             # pylint: disable=no-member
             SensorStream._debug("Subscribing to sensor stream")
-        await self.subscribe([("sensor/#", QOS_2)])
+        # await self.subscribe([("application/#/device/#/# ", QOS_2)])
+        await self.subscribe([("application/#", QOS_2)])
 
         self._running = True
         return None
@@ -56,7 +58,7 @@ class SensorStream(MQTTClient):
             SensorStream._debug("Shutting down broker")
 
         await self.disconnect()
-        await self._broker.shutdown()
+        # await self._broker.shutdown()
 
         self._running = False
 

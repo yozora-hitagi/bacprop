@@ -12,13 +12,13 @@ from bacprop.bacnet.network import VirtualSensorNetwork
 from bacprop.defs import Logable
 from bacprop.mqtt import SensorStream
 
-_debug = 0
+_debug = 1
 _log = ModuleLogger(globals())
 
 
 @bacpypes_debugging
 class BacPropagator(Logable):
-    SENSOR_ID_KEY = "sensorId"
+    SENSOR_ID_KEY = "applicationID"
     SENSOR_OUTDATED_TIME = 60 * 10  # 10 Minutes
 
     def __init__(self) -> None:
@@ -52,12 +52,13 @@ class BacPropagator(Logable):
 
         # Only allow through data which are actually floats
         for key in data:
-            if type(data[key]) not in (float, int):
-                BacPropagator._warning(
-                    f"Recieved non-number value ({key}: '{data[key]}') from sensor id: {sensor_id}"
-                )
-            else:
-                values[key] = data[key]
+            # if type(data[key]) not in (float, int):
+            #     BacPropagator._warning(
+            #         f"Recieved non-number value ({key}: '{data[key]}') from sensor id: {sensor_id}"
+            #     )
+            # else:
+            #     values[key] = data[key]
+            values[key] = data[key]
 
         sensor = self._sensor_net.get_sensor(sensor_id)
 

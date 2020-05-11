@@ -15,7 +15,7 @@ from bacprop.bacnet.sensor import Sensor
 from typing import Dict, Union, NoReturn, List
 from bacprop.defs import Logable
 
-_debug = 0
+_debug = 1
 _log = ModuleLogger(globals())
 
 
