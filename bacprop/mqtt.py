@@ -2,6 +2,9 @@ import asyncio
 import json
 from typing import AsyncIterable, Dict, NoReturn, Union
 
+import random
+import base64
+
 from bacpypes.debugging import ModuleLogger, bacpypes_debugging
 # from hbmqtt.broker import Broker
 from hbmqtt.client import QOS_2, MQTTClient
@@ -16,6 +19,11 @@ class SensorStream(MQTTClient):
     #     "listeners": {"default": {"type": "tcp", "bind": "0.0.0.0:1883"}},
     #     "topic-check": {"enabled": False},
     # }
+	
+    DATA_CONFIG = {
+        "test1":"data1",
+        "test2":"data2"
+    }
 
     def __init__(self) -> None:
         # pylint: disable=no-member
@@ -72,6 +80,13 @@ class SensorStream(MQTTClient):
             # Decode the JSON data
             try:
                 data = json.loads(packet.payload.data)
+                deviceName = data["deviceName"]
+                random.seed(deviceName)
+                result = data["data"]
+                temp = int(base64.b64decode(result), 16)
+                data["data"]  =  temp
+                self.DATA_CONFIG[SENSOR_ID_KEY] = random.randint(0, 1000000)
+                data.update(self.DATA_CONFIG)
                 yield data
             except json.JSONDecodeError as e:
                 # pylint: disable=no-member
