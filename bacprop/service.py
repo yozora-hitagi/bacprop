@@ -1,5 +1,7 @@
 import asyncio
+import base64
 import logging
+import random
 import time
 import traceback
 from threading import Thread
@@ -8,6 +10,7 @@ from typing import Dict, Any
 from bacpypes.debugging import ModuleLogger, bacpypes_debugging
 from hbmqtt.broker import Broker
 
+from bacprop import config
 from bacprop.bacnet.network import VirtualSensorNetwork
 from bacprop.defs import Logable
 from bacprop.mqtt import SensorStream
@@ -18,7 +21,7 @@ _log = ModuleLogger(globals())
 
 @bacpypes_debugging
 class BacPropagator(Logable):
-    SENSOR_ID_KEY = "applicationID"
+    # SENSOR_ID_KEY = "deviceName"
     SENSOR_OUTDATED_TIME = 60 * 10  # 10 Minutes
 
     def __init__(self) -> None:
@@ -27,45 +30,52 @@ class BacPropagator(Logable):
         self._sensor_net = VirtualSensorNetwork("0.0.0.0")
         self._running = False
 
+        self._device_id_ = 0
+
     def _handle_sensor_data(self, data: Dict[str, Any]) -> None:
-        if BacPropagator.SENSOR_ID_KEY not in data:
-            BacPropagator._warning(f"sensorId missing from sensor data: {data}")
-            return
 
-        try:
-            sensor_id = int(data[BacPropagator.SENSOR_ID_KEY])
-        except ValueError:
-            BacPropagator._warning(
-                f"sensorId {data[BacPropagator.SENSOR_ID_KEY]} could not be decoded"
-            )
-            return
+        # if BacPropagator.SENSOR_ID_KEY not in data:
+        #     BacPropagator._warning(f"sensorId {BacPropagator.SENSOR_ID_KEY} missing from sensor data: {data}")
+        #     return
 
-        if sensor_id < 0:
-            BacPropagator._warning(
-                f"sensorId {data[BacPropagator.SENSOR_ID_KEY]} is an invalid id"
-            )
-            return
+        sensor_id = self._device_id_
+        self._device_id_ += 1
+        # try:
+        #     sensor_id = int(data[BacPropagator.SENSOR_ID_KEY])
+        # except ValueError:
+        #     BacPropagator._warning(
+        #         f"sensorId {data[BacPropagator.SENSOR_ID_KEY]} could not be decoded"
+        #     )
+        #     return
+        #
+        # if len(sensor_id) <= 0:
+        #     BacPropagator._warning(
+        #         f"sensorId {data[BacPropagator.SENSOR_ID_KEY]} is an invalid id"
+        #     )
+        #     return
+        #
+        # del data[BacPropagator.SENSOR_ID_KEY]
 
-        del data[BacPropagator.SENSOR_ID_KEY]
+        BacPropagator._debug(f"rev {sensor_id} with data: {data}")
 
-        values: Dict[str, float] = {}
-
-        # Only allow through data which are actually floats
-        for key in data:
-            # if type(data[key]) not in (float, int):
-            #     BacPropagator._warning(
-            #         f"Recieved non-number value ({key}: '{data[key]}') from sensor id: {sensor_id}"
-            #     )
-            # else:
-            #     values[key] = data[key]
-            values[key] = data[key]
+        # values: Dict[str, float] = {}
+        #
+        # # Only allow through data which are actually floats
+        # for key in data:
+        #     # if type(data[key]) not in (float, int):
+        #     #     BacPropagator._warning(
+        #     #         f"Recieved non-number value ({key}: '{data[key]}') from sensor id: {sensor_id}"
+        #     #     )
+        #     # else:
+        #     #     values[key] = data[key]
+        #     values[key] = data[key]
 
         sensor = self._sensor_net.get_sensor(sensor_id)
 
         if not sensor:
             sensor = self._sensor_net.create_sensor(sensor_id)
 
-        sensor.set_values(values)
+        sensor.set_values(data)
 
         if sensor.has_fault():
             if _debug:
@@ -79,9 +89,9 @@ class BacPropagator(Logable):
         while self._running:
             for sensor_id, sensor in self._sensor_net.get_sensors().items():
                 if (
-                    not sensor.has_fault()
-                    and abs(time.time() - sensor.get_update_time())
-                    > BacPropagator.SENSOR_OUTDATED_TIME
+                        not sensor.has_fault()
+                        and abs(time.time() - sensor.get_update_time())
+                        > BacPropagator.SENSOR_OUTDATED_TIME
                 ):
                     if _debug:
                         BacPropagator._debug(

@@ -9,6 +9,8 @@ from bacpypes.debugging import ModuleLogger, bacpypes_debugging
 # from hbmqtt.broker import Broker
 from hbmqtt.client import QOS_2, MQTTClient
 
+from bacprop import config
+
 _debug = 0
 _log = ModuleLogger(globals())
 
@@ -19,15 +21,11 @@ class SensorStream(MQTTClient):
     #     "listeners": {"default": {"type": "tcp", "bind": "0.0.0.0:1883"}},
     #     "topic-check": {"enabled": False},
     # }
-	
-    DATA_CONFIG = {
-        "test1":"data1",
-        "test2":"data2"
-    }
+
 
     def __init__(self) -> None:
         # pylint: disable=no-member
-        SensorStream._info("Initialising broker on 0.0.0.0:1883")
+        # SensorStream._info("Initialising broker on 0.0.0.0:1883")
         # self._broker = Broker(SensorStream.BROKER_CONFIG, asyncio.get_event_loop())
         self._running = False
         MQTTClient.__init__(self)
@@ -42,13 +40,13 @@ class SensorStream(MQTTClient):
             # pylint: disable=no-member
             SensorStream._debug("Connecting to broker")
         # await self.connect("mqtt://localhost")
-        await self.connect("mqtt://192.168.1.113")
+        await self.connect(config.MQTT_SERVER_ADDRESS)
 
         if _debug:
             # pylint: disable=no-member
             SensorStream._debug("Subscribing to sensor stream")
         # await self.subscribe([("application/#/device/#/# ", QOS_2)])
-        await self.subscribe([("application/#", QOS_2)])
+        await self.subscribe([(config.MQTT_SUB_TOPIC, QOS_2)])
 
         self._running = True
         return None
@@ -61,9 +59,9 @@ class SensorStream(MQTTClient):
         if not self._running:
             return None
 
-        if _debug:
-            # pylint: disable=no-member
-            SensorStream._debug("Shutting down broker")
+        # if _debug:
+        #     # pylint: disable=no-member
+        #     SensorStream._debug("Shutting down broker")
 
         await self.disconnect()
         # await self._broker.shutdown()
@@ -80,13 +78,7 @@ class SensorStream(MQTTClient):
             # Decode the JSON data
             try:
                 data = json.loads(packet.payload.data)
-                deviceName = data["deviceName"]
-                random.seed(deviceName)
-                result = data["data"]
-                temp = int(base64.b64decode(result), 16)
-                data["data"]  =  temp
-                self.DATA_CONFIG[SENSOR_ID_KEY] = random.randint(0, 1000000)
-                data.update(self.DATA_CONFIG)
+
                 yield data
             except json.JSONDecodeError as e:
                 # pylint: disable=no-member

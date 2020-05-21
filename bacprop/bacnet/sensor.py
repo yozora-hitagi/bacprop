@@ -10,7 +10,7 @@ from bacpypes.comm import bind
 from bacpypes.debugging import ModuleLogger, bacpypes_debugging
 from bacpypes.local.device import LocalDeviceObject
 from bacpypes.netservice import NetworkServiceAccessPoint, NetworkServiceElement
-from bacpypes.object import AnalogValueObject, register_object_type
+from bacpypes.object import AnalogValueObject, register_object_type,AnalogInputObject,CharacterStringValueObject
 from bacpypes.pdu import Address, LocalBroadcast
 from bacpypes.service.device import WhoIsIAmServices
 from bacpypes.service.object import (
@@ -26,20 +26,20 @@ _log = ModuleLogger(globals())
 
 
 @bacpypes_debugging
-class _SensorValueObject(AnalogValueObject, Logable):
+class _SensorValueObject(CharacterStringValueObject, Logable):
     def __init__(self, index: int, name: str):
         kwargs = dict(
-            objectIdentifier=("analogValue", index),
+            objectIdentifier=("characterstringValue", index),
             objectName=name,
-            presentValue=0,
-            statusFlags=[0, 0, 0, 0],
+            presentValue="",
+            statusFlags=[0, 0, 0, 0]
         )
         if _debug:
             _SensorValueObject._debug("__init__ %r", kwargs)
 
-        AnalogValueObject.__init__(self, **kwargs)
+        CharacterStringValueObject.__init__(self, **kwargs)
 
-    def set_value(self, value: float) -> None:
+    def set_value(self, value: str) -> None:
         self.presentValue = value
 
     def set_fault(self, fault: bool) -> None:
