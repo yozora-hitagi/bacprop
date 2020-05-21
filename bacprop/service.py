@@ -27,7 +27,7 @@ class BacPropagator(Logable):
     def __init__(self) -> None:
         BacPropagator._info(f"Intialising SensorStream and Bacnet")
         self._stream = SensorStream()
-        self._sensor_net = VirtualSensorNetwork("0.0.0.0")
+        self._sensor_net = VirtualSensorNetwork(config.LISTEN)
         self._running = False
 
         self._device_id_ = 0

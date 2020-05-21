@@ -59,7 +59,8 @@ class VirtualSensorNetwork(Network):
         Network.__init__(self, broadcast_address=LocalBroadcast())
 
         # create the VLAN router, bind it to the local network
-        self._router = _VLANRouter(Address(local_address), 0)
+        address = Address(local_address)
+        self._router = _VLANRouter(address, 0)
 
         self._address_index = 1
         # create a node for the router, address 1 on the VLAN
