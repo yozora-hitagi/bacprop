@@ -30,16 +30,21 @@ class BacPropagator(Logable):
         self._sensor_net = VirtualSensorNetwork(config.LISTEN)
         self._running = False
 
-        self._device_id_ = 0
+        # self._device_id_ = 0
 
     def _handle_sensor_data(self, data: Dict[str, Any]) -> None:
+
+        if "deviceName" not in data:
+            BacPropagator._warning(f"Drop for deviceName missing from sensor data: {data}")
+            return
+
+        random.seed(data["deviceName"])
+        sensor_id = random.randint(0, 1000000)
 
         # if BacPropagator.SENSOR_ID_KEY not in data:
         #     BacPropagator._warning(f"sensorId {BacPropagator.SENSOR_ID_KEY} missing from sensor data: {data}")
         #     return
 
-        sensor_id = self._device_id_
-        self._device_id_ += 1
         # try:
         #     sensor_id = int(data[BacPropagator.SENSOR_ID_KEY])
         # except ValueError:
