@@ -5,6 +5,8 @@ from typing import AsyncIterable, Dict, NoReturn, Union
 import random
 import base64
 
+import logging
+
 from bacpypes.debugging import ModuleLogger, bacpypes_debugging
 # from hbmqtt.broker import Broker
 from hbmqtt.client import QOS_2, MQTTClient
@@ -29,6 +31,15 @@ class SensorStream(MQTTClient):
         # self._broker = Broker(SensorStream.BROKER_CONFIG, asyncio.get_event_loop())
         self._running = False
         MQTTClient.__init__(self)
+
+
+
+        logging.getLogger("hbmqtt.client.plugins").setLevel(logging.INFO)
+        # 限制了接受发送数据的debug日志 ,下面注释的这个 和上卖弄 这句话一个效果
+        #self.plugins_manager.logger.setLevel(logging.INFO)
+
+
+        logging.getLogger("hbmqtt.mqtt.protocol.handler").setLevel(logging.INFO)
 
     async def start(self) -> Union[None, NoReturn]:
         # if _debug:
