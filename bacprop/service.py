@@ -41,6 +41,10 @@ class BacPropagator(Logable):
         random.seed(data["deviceName"])
         sensor_id = random.randint(0, 1000000)
 
+        result = data["data"]
+        temp = int(base64.b64decode(result), 16)
+        data["data"] = temp
+
         # if BacPropagator.SENSOR_ID_KEY not in data:
         #     BacPropagator._warning(f"sensorId {BacPropagator.SENSOR_ID_KEY} missing from sensor data: {data}")
         #     return
