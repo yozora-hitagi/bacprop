@@ -41,9 +41,19 @@ class BacPropagator(Logable):
         random.seed(data["deviceName"])
         sensor_id = random.randint(0, 1000000)
 
+        if "data" not in data:
+            BacPropagator._warning(f"Drop for data missing from sensor data: {data}")
+            return
+
         result = data["data"]
-        temp = int(base64.b64decode(result), 16)
-        data["data"] = temp
+        strdata = base64.b64decode(result).hex()
+        if len(strdata) < 14:
+            BacPropagator._warning(f"Drop for data length error from sensor data: {data}")
+            return
+        temp = strdata[6:8] + strdata[4:6]
+        data["temp"] = int(temp, 16) / 10
+        data["humidity"] = int(strdata[12:14], 16) / 2
+        del data["data"]
 
         # if BacPropagator.SENSOR_ID_KEY not in data:
         #     BacPropagator._warning(f"sensorId {BacPropagator.SENSOR_ID_KEY} missing from sensor data: {data}")
@@ -84,7 +94,7 @@ class BacPropagator(Logable):
         if not sensor:
             sensor = self._sensor_net.create_sensor(sensor_id)
 
-        sensor.set_values(data)
+        sensor.set_values(config.SENSOR_DEFINE["temp"], data)
 
         if sensor.has_fault():
             if _debug:

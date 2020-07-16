@@ -10,7 +10,7 @@ from bacpypes.comm import bind
 from bacpypes.debugging import ModuleLogger, bacpypes_debugging
 from bacpypes.local.device import LocalDeviceObject
 from bacpypes.netservice import NetworkServiceAccessPoint, NetworkServiceElement
-from bacpypes.object import AnalogValueObject, register_object_type,AnalogInputObject,CharacterStringValueObject
+from bacpypes.object import AnalogValueObject, register_object_type, AnalogInputObject, CharacterStringValueObject
 from bacpypes.pdu import Address, LocalBroadcast
 from bacpypes.service.device import WhoIsIAmServices
 from bacpypes.service.object import (
@@ -26,16 +26,16 @@ _log = ModuleLogger(globals())
 
 
 @bacpypes_debugging
-class _SensorValueObject(CharacterStringValueObject, Logable):
-    def __init__(self, index: int, name: str):
+class _CharacterStringValueObject(CharacterStringValueObject, Logable):
+    def __init__(self, index: int, name: str, value: str = ""):
         kwargs = dict(
             objectIdentifier=("characterstringValue", index),
             objectName=name,
-            presentValue="",
+            presentValue=value,
             statusFlags=[0, 0, 0, 0]
         )
         if _debug:
-            _SensorValueObject._debug("__init__ %r", kwargs)
+            _CharacterStringValueObject._debug("__init__ %r", kwargs)
 
         CharacterStringValueObject.__init__(self, **kwargs)
 
@@ -46,7 +46,31 @@ class _SensorValueObject(CharacterStringValueObject, Logable):
         self.statusFlags[StatusFlags.bitNames["fault"]] = int(fault)
 
 
-register_object_type(_SensorValueObject)
+register_object_type(_CharacterStringValueObject)
+
+
+@bacpypes_debugging
+class _AnalogValueObject(AnalogValueObject, Logable):
+    def __init__(self, index: int, name: str, value: float = 0):
+        kwargs = dict(
+            objectIdentifier=("analogValue", index),
+            objectName=name,
+            presentValue=value,
+            statusFlags=[0, 0, 0, 0],
+        )
+        if _debug:
+            _AnalogValueObject._debug("__init__ %r", kwargs)
+
+        AnalogValueObject.__init__(self, **kwargs)
+
+    def set_value(self, value: float) -> None:
+        self.presentValue = value
+
+    def set_fault(self, fault: bool) -> None:
+        self.statusFlags[StatusFlags.bitNames["fault"]] = int(fault)
+
+
+register_object_type(_AnalogValueObject)
 
 
 @bacpypes_debugging
@@ -144,19 +168,18 @@ class Sensor(_VLANApplication, Logable):
         self._id = sensor_id
         self._vlan_address = vlan_address
         self._object_index = 0
-        self._objects: Dict[str, _SensorValueObject] = {}
+        self._objects: Dict[str, Any] = {}
         self._last_updated: float = 0
         self._fault = False
 
-    def _register_objects(self, keys: Iterable[str]) -> None:
-        value_keys = list(keys)
-        value_keys.sort()
+    def _register_objects(self, sensor_def: Dict[str, Any], new_values: Dict[str, Any]) -> None:
 
-        for key_name in value_keys:
-            new_object = _SensorValueObject(self._object_index, key_name)
-            self.add_object(new_object)
-            self._object_index += 1
-            self._objects[key_name] = new_object
+        for key, obj in sensor_def.items():
+            if key in new_values.keys():
+                new_object = obj(self._object_index, key, new_values[key])
+                self.add_object(new_object)
+                self._object_index += 1
+                self._objects[key] = new_object
 
     def _clear_objects(self) -> None:
         for attr in self._objects:
@@ -165,7 +188,7 @@ class Sensor(_VLANApplication, Logable):
         self._object_index = 0
         self._objects = {}
 
-    def set_values(self, new_values: Dict[str, Any]) -> None:
+    def set_values(self, sensor_def: Dict[str, Any], new_values: Dict[str, Any]) -> None:
         """
         Set the values of the sensor. If the attributes have changed,
         update the attributes.
@@ -173,7 +196,7 @@ class Sensor(_VLANApplication, Logable):
         self._last_updated = time.time()
         if set(self._objects.keys()) != set(new_values.keys()):
             self._clear_objects()
-            self._register_objects(new_values)
+            self._register_objects(sensor_def, new_values)
 
         for attr in new_values:
             self._objects[attr].set_value(new_values[attr])
